@@ -1,4 +1,4 @@
-// DifficultyDirector.cs — multi-player aware, per-player difficulty states + DRIVER TENURE RUBBERBAND
+// DifficultyDirector.cs - multi-player aware, per-player difficulty states + DRIVER TENURE RUBBERBAND
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,10 +6,10 @@ using UnityEngine;
 public struct DifficultyState
 {
     public float overall;        // 0..1
-    public float spawnPressure;  // 0..1 — obstacle sûrûség
-    public float precision;      // 0..1 — mini-game tightness
-    public float punishment;     // 0..1 — bünti/lock/crash keménység
-    public float rewardBias;     // 0..1 — 0: obstacle-heavy, 1: reward-heavy
+    public float spawnPressure;  // 0..1 - obstacle density
+    public float precision;      // 0..1 - mini-game tightness
+    public float punishment;     // 0..1 - penalty/lock/crash severity
+    public float rewardBias;     // 0..1 - 0: obstacle-heavy, 1: reward-heavy
 }
 
 public class DifficultyDirector : MonoBehaviour
@@ -28,7 +28,7 @@ public class DifficultyDirector : MonoBehaviour
     public float rampPerSecond = 0.75f;
 
     [Header("Mapping from skill->difficulty")]
-    [Tooltip("Gamma for skill (0..1) before mapping. >1 = hangsúly a magas skill tartományra.")]
+    [Tooltip("Gamma for skill (0..1) before mapping. >1 = emphasizes the high skill range.")]
     [Range(0.2f, 3f)] public float gammaOverall = 1.0f;
 
     [Tooltip("Spawn pressure (obstacles) as a function of skill.")]
@@ -37,59 +37,59 @@ public class DifficultyDirector : MonoBehaviour
     [Tooltip("Mini-game precision as a function of skill.")]
     public AnimationCurve precisionMap = AnimationCurve.Linear(0, 0.2f, 1, 1f);
 
-    [Tooltip("Punishment (büntetés keménysége) as a function of skill.")]
+    [Tooltip("Punishment severity as a function of skill.")]
     public AnimationCurve punishmentMap = AnimationCurve.Linear(0, 0.2f, 1, 1f);
 
-    [Tooltip("Reward bias as a function of skill (low skill -> több collectible).")]
+    [Tooltip("Reward bias as a function of skill (low skill -> more collectibles).")]
     public AnimationCurve rewardBiasMap = AnimationCurve.Linear(0, 0.7f, 1, 0.3f);
 
     [Header("Ramp direction")]
-    public float rampUpPerSecond = 0.45f;    // nehezítés
-    public float rampDownPerSecond = 1.10f;  // könnyítés
+    public float rampUpPerSecond = 0.45f;    // increasing difficulty
+    public float rampDownPerSecond = 1.10f;  // decreasing difficulty
 
     // ===================== DRIVER TENURE RUBBERBAND =====================
     [Header("Driver Tenure Rubberband (gap the driver)")]
     public bool enableDriverTenure = true;
 
-    [Tooltip("Lépcsõ hossza (sec). Te 15-öt akartál.")]
+    [Tooltip("Step duration (sec).")]
     public float tenureStepSeconds = 15f;
 
-    [Tooltip("Hány lépcsõ után legyen maxos a 'gap' (pl. 6 -> 90 sec után tetõzik).")]
+    [Tooltip("Number of steps until the gap is maximized (e.g., 6 -> peaks after 90 sec).")]
     [Min(1)] public int tenureMaxSteps = 6;
 
-    [Tooltip("Ha kell egy kis grace, amíg nem büntetjük a drivert (sec). 0 = azonnal lépcsõzünk 15s-onként.")]
+    [Tooltip("Grace period before penalizing the driver (sec). 0 = immediate stepping every 15s.")]
     [Min(0f)] public float tenureGraceSeconds = 0f;
 
-    [Tooltip("A lépcsõzött 0..1 tenure-t ezzel formázzuk. Linear jó kezdés. (0->0, 1->1)")]
+    [Tooltip("Shapes the stepped 0..1 tenure. Linear is a good start. (0->0, 1->1)")]
     public AnimationCurve tenureCurve = AnimationCurve.Linear(0, 0, 1, 1);
 
     [Header("Tenure effect strengths (applied to CURRENT DRIVER only)")]
-    [Tooltip("Max mennyivel tolja fel a spawnPressure-t max tenure-nél.")]
+    [Tooltip("Max amount to increase spawnPressure at max tenure.")]
     [Range(0f, 1f)] public float spawnPressureBoostAtMaxTenure = 0.35f;
 
-    [Tooltip("Max mennyivel húzza le a rewardBias-t max tenure-nél (kevesebb collectible).")]
+    [Tooltip("Max amount to decrease rewardBias at max tenure (fewer collectibles).")]
     [Range(0f, 1f)] public float rewardBiasPenaltyAtMaxTenure = 0.35f;
 
-    [Tooltip("Opcionális: mini-game szigorítás max tenure-nél.")]
+    [Tooltip("Optional: tighten mini-games at max tenure.")]
     [Range(0f, 1f)] public float precisionBoostAtMaxTenure = 0.10f;
 
-    [Tooltip("Opcionális: bünti keményítés max tenure-nél.")]
+    [Tooltip("Optional: increase punishment severity at max tenure.")]
     [Range(0f, 1f)] public float punishmentBoostAtMaxTenure = 0.12f;
 
     [Header("Scale tenure by how much better the driver is (recommended ON)")]
     public bool scaleTenureByAdvantage = true;
 
-    [Tooltip("Ha a driver csak kicsivel jobb, már induljon valamennyi gap (pozitív bias).")]
+    [Tooltip("If the driver is slightly better, start generating some gap (positive bias).")]
     [Range(-0.2f, 0.2f)] public float advantageBias = 0.06f;
 
-    [Tooltip("Akkora skill-különbségnél legyen 100% hatás, amit itt adsz meg (0.25-0.45 jó).")]
+    [Tooltip("The skill difference at which the effect reaches 100% (0.25-0.45 is ideal).")]
     [Range(0.05f, 0.8f)] public float advantageRange = 0.35f;
 
-    [Tooltip("Ha nincs advantage, ennyi szorzót azért kap a tenure (ne legyen 0).")]
+    [Tooltip("Multiplier applied to tenure even if there is no advantage (prevents it from being 0).")]
     [Range(0f, 1f)] public float minAdvantageMultiplier = 0.25f;
 
     [Header("Extra: scale tenure by driver skill too (prevents bullying low-skill drivers)")]
-    [Tooltip("0 = tenure nem függ a driver skilltõl. 1 = tenure teljesen a skilltõl függ.")]
+    [Tooltip("0 = tenure does not depend on driver skill. 1 = tenure depends entirely on driver skill.")]
     [Range(0f, 1f)] public float scaleTenureByDriverSkill = 0.65f;
 
     // runtime debug (read-only)
@@ -280,7 +280,7 @@ public class DifficultyDirector : MonoBehaviour
             if (!p || prof == null) continue;
 
             float s = Mathf.Lerp(0.5f, prof.Skill01, prof.Confidence);
-            if (!enableAdaptation) s = 0.5f; // BASELINE: Erõltetett fix közepes nehézség
+            if (!enableAdaptation) s = 0.5f; // BASELINE: Forced fixed medium difficulty
             float sGamma = Mathf.Pow(Mathf.Clamp01(s), gammaOverall);
 
             var desired = ComputeDesiredFromSkill(sGamma);
@@ -340,7 +340,7 @@ public class DifficultyDirector : MonoBehaviour
     {
         from.overall = Mathf.MoveTowards(from.overall, to.overall, step);
 
-        // spawnPressure külön rampol (mert ez a legérzékenyebb)
+        // spawnPressure ramps separately (as it is the most sensitive)
         from.spawnPressure = Mathf.MoveTowards(from.spawnPressure, to.spawnPressure, Step(from.spawnPressure, to.spawnPressure, tickInterval));
 
         from.precision = Mathf.MoveTowards(from.precision, to.precision, step);

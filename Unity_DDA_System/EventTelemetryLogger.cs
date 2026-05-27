@@ -29,7 +29,7 @@ public class EventTelemetryLogger : MonoBehaviour
     {
         if (!enableLogging) return;
 
-        // Ha megszakadt vagy megváltozott a session, lezárjuk a régi fájlt
+        // If the session has changed or ended, dispose the old writer
         if (_writer != null && (!TelemetrySessionContext.IsActive || TelemetrySessionContext.SessionId != _activeSessionId))
         {
             _writer.Dispose();

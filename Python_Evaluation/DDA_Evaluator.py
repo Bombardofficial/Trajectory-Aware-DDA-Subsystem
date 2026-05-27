@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 from __future__ import annotations
 
@@ -142,7 +141,7 @@ def discover_logs(input_dir: str) -> Dict[str, SessionBundle]:
         if sid not in sessions:
             meta = parse_meta_lines(path)
 
-            # Kondíció megállapítása a mappa vagy fájl nevéből
+            # condition check
             path_lower = path.lower()
             if "baseline" in path_lower:
                 cond = "Baseline"
@@ -263,13 +262,13 @@ def compute_score_spread_series(skill_df: pd.DataFrame) -> pd.DataFrame:
 
     work = skill_df.copy()
 
-    # Csak azokat az oszlopokat vesszük figyelembe, ahol a meccs során a max pontszám > 0
-    # (Így a hiányzó játékosok 0 pontjai nem torzítják a minimumot és a spread-et)
+    # Only those columns are counted in, where the score at the end of the match is > 0
+    # (This way missing players do not distort the minimum and the spread)
     point_cols = ["p1Points", "p2Points", "p3Points", "p4Points"]
     active_cols = [c for c in point_cols if work[c].max() > 0]
 
     if len(active_cols) < 2:
-        active_cols = point_cols[:2]  # Fallback, ha valamiért mindenki 0 ponton állna
+        active_cols = point_cols[:2]  # Fallback, if everyone is on 0 score
 
     work["score_max"] = work[active_cols].max(axis=1)
     work["score_min"] = work[active_cols].min(axis=1)
@@ -481,7 +480,7 @@ def plot_fairness_metric_boxplot(summary_df: pd.DataFrame, metric_col: str, titl
         return
 
     df = summary_df.dropna(subset=["condition", metric_col])
-    # Csak az ismert kondíciókat hasonlítjuk össze
+    # Comparing only known conditions
     df = df[df["condition"].isin(["Baseline", "Adaptive"])]
 
     if df.empty or df["condition"].nunique() < 2:
@@ -491,7 +490,7 @@ def plot_fairness_metric_boxplot(summary_df: pd.DataFrame, metric_col: str, titl
     baseline_data = df[df["condition"] == "Baseline"][metric_col]
     adaptive_data = df[df["condition"] == "Adaptive"][metric_col]
 
-    # Mann-Whitney U teszt (Wilcoxon ranksum független mintákra)
+    # Mann-Whitney U test (Wilcoxon ranksum)
     stat, p_val = mannwhitneyu(baseline_data, adaptive_data, alternative='two-sided')
 
     plt.figure(figsize=(8, 6))
@@ -500,19 +499,19 @@ def plot_fairness_metric_boxplot(summary_df: pd.DataFrame, metric_col: str, titl
     sns.boxplot(data=df, x="condition", y=metric_col, width=0.5, boxprops={'alpha': 0.8})
     sns.swarmplot(data=df, x="condition", y=metric_col, color="black", size=6)
 
-    # Átlagvonalak (opcionális, de jól mutat a követelmények alapján)
+    # Mean lines
     means = df.groupby("condition")[metric_col].mean()
     plt.plot([-0.25, 0.25], [means["Adaptive"], means["Adaptive"]], color='black', linestyle='--',
              linewidth=1.5) if "Adaptive" in means else None
     plt.plot([0.75, 1.25], [means["Baseline"], means["Baseline"]], color='black', linestyle='--',
              linewidth=1.5) if "Baseline" in means else None
 
-    # Cím p-értékkel
+    # Title with p value
     plt.title(f"{title}\np-value = {p_val:.4f} (Mann-Whitney U test)")
     plt.xlabel("Game Condition")
     plt.ylabel(ylabel)
 
-    # Tengely formázás
+
     plt.ylim(bottom=0)
 
     savefig_multi(os.path.join(PLOTS_DIR, filename))
@@ -562,6 +561,7 @@ def plot_aggregated_overspeed_heatmap(sessions: Dict[str, SessionBundle]) -> Non
         plt.xlabel("Track Segment")
         plt.ylabel("Lane")
         savefig_multi(os.path.join(PLOTS_DIR, f"ab_aggregated_overspeed_heatmap_{cond.lower()}"))
+
 # =========================
 # TXT SUMMARY
 # =========================
@@ -663,13 +663,13 @@ def main() -> None:
 
     summary_rows = []
 
-    # 1. Csak az adatokat gyűjtjük ki sessionönként (nincs plotolás itt!)
+    # 1. Collecting data per session
     for sid, bundle in sessions.items():
         summary_rows.append(summarize_session(bundle))
 
     summary_df = pd.DataFrame(summary_rows)
 
-    # 2. Összesített A/B tesztes Plotok generálása
+    # 2. Summarized A/B test plots generation
     print("[INFO] Generating aggregated plots...")
 
     plot_fairness_metric_boxplot(
@@ -691,15 +691,15 @@ def main() -> None:
     plot_aggregated_crash_density(sessions)
     plot_aggregated_overspeed_heatmap(sessions)
 
-    # 3. Egyetlen reprezentatív session plotolása (hogy megmutasd hogy működik a controller)
+    # 3. Plotting one representative session (to show how the controller works)
     adaptive_sessions = [b for b in sessions.values() if b.condition == "Adaptive"]
     if adaptive_sessions:
-        representative = adaptive_sessions[0] # Fogja az első Adaptive sessiont
+        representative = adaptive_sessions[0] # holds the first adaptive session
         plot_skill_time_series(representative)
         plot_skill_confidence(representative)
         print(f"[INFO] Representative session plots generated for: {representative.session_id}")
 
-    # 4. Szöveges riport
+    # 4. text report
     write_summary_txt(summary_df)
 
     print("=" * 60)

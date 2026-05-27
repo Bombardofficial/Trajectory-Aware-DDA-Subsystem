@@ -24,7 +24,7 @@ public class TrajectoryTelemetryLogger : MonoBehaviour
     {
         if (!enableLogging) return;
 
-        // BIZTOSÍTÉK: Ha új session indult, zárjuk a régi fájlt
+        // If the telemetry session has changed or ended, dispose the old writer to start fresh on the next log
         if (_writer != null && (!TelemetrySessionContext.IsActive || TelemetrySessionContext.SessionId != _activeSessionId))
         {
             _writer.Dispose();
@@ -33,13 +33,13 @@ public class TrajectoryTelemetryLogger : MonoBehaviour
 
         if (!PlayerJoinManager.IsRaceStarted) return;
 
-        // --- A HIBA ITT VOLT: HA AZ AUTÓ MEGSEMMISÜLT, KERESSÜK MEG AZ ÚJAT ---
+        // if no car reference is set, try to find one in the scene
         if (car == null)
         {
             car = FindObjectOfType<ArcadeVehicleController>();
         }
 
-        // Ha még mindig nincs autó a pályán, kilépünk
+        // if we still don't have a car reference, we can't log anything, so just return
         if (car == null) return;
         // ----------------------------------------------------------------------
 

@@ -32,7 +32,7 @@ public class SkillTelemetryLogger : MonoBehaviour
     {
         if (!enableLogging) return;
 
-        // BIZTOSÍTÉK: Ha új session indult, zárjuk a régi fájlt
+        // If session has changed since last log, dispose old writer to start a new file on next log
         if (_writer != null && (!TelemetrySessionContext.IsActive || TelemetrySessionContext.SessionId != _activeSessionId))
         {
             _writer.Dispose();
@@ -75,7 +75,7 @@ public class SkillTelemetryLogger : MonoBehaviour
             TelemetrySessionContext.StartNew(playerCount);
         }
 
-        _activeSessionId = TelemetrySessionContext.SessionId; // Új sor!
+        _activeSessionId = TelemetrySessionContext.SessionId;
 
         string[] meta =
         {
